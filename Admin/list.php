@@ -2,7 +2,6 @@
 include './includes/login_required.php';
 include 'includes/dbcon.php';
 include 'includes/code.php';
-$current_time = time();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -46,7 +45,7 @@ include 'includes/head.php';
                   if(mysqli_num_rows($select) > 0){
                     ?>
 
-              <table class="table" id="table1">
+              <table class="table" id="table1" style="font-size:14px">
                 <thead>
                   <tr>
                     <th>#</th>
@@ -70,13 +69,28 @@ include 'includes/head.php';
                   $no ++;
                   $duration = $row['duration'];
                   $examID = $row['exam_id'];
+                  $exam_start_date = strtotime($row['exam_start']);
+                  $new_start_date = date('d M Y', $exam_start_date);
+                  $exam_start_time = strtotime($row['exam_start_time']);
+                  $new_start_time = date('h:i A',$exam_start_time);
+                  $exam_end_date = strtotime($row['exam_end']);
+                  $new_end_date = date('d M Y', $exam_end_date);
+                  $exam_end_time = strtotime($row['exam_end_time']);
+                  $new_end_time = date('h:i A',$exam_end_time);
+
+                  // current time
+                  date_default_timezone_set("Asia/Dhaka");
+                  $date = date('Y-m-d H:i');
+                  $current_time = strtotime($date);
                  
                   ?>
                   <tr>
                     <td><?=$no?></td>
                     <td><?=$row['exam_id'];?></td>
                     <td><?=$row['exam_name'];?></td>
-                    <td><?=$row['exam_start']." to ".$row['exam_end'];?></td>
+                    <td>
+                      <?=$new_start_date." ".$new_start_time." to ".$new_end_date." ".$new_end_time?>
+                    </td>
                     <td><?php 
                     $countQuestion = mysqli_query($con, "SELECT * FROM questions WHERE exam_id='$examID'");
                     $countNumbers = mysqli_num_rows($countQuestion);
@@ -104,20 +118,45 @@ include 'includes/head.php';
                     <td><?php
                     if($row['status'] == 1){
                       ?>
-                      <button class="badge bg-success border-0 publishExamBtn">Published</button>
+                      <button value="<?=$row['id'] ?>"
+                        class="badge bg-success border-0 unPublishExamBtn">Published</button>
                       <?php
                     }else{
                       ?>
-                      <button class="badge bg-danger border-0 publishExamBtn">Unpublished</button>
+                      <button value="<?=$row['id'] ?>"
+                        class="badge bg-danger border-0 publishExamBtn">Unpublished</button>
                       <?php
                     }
                     ?>
                     </td>
                     <td>
-                      <span class="badge bg-warning">Taken</span>
+                      <?php 
+                      $examStartDate = $row['exam_start']." ".$row['exam_start_time'];
+                      $examEndDate = $row['exam_end']." ".$row['exam_end_time'];
+
+                      $examStartTimestamp = strtotime($examStartDate);
+                      $examEndTimestamp = strtotime($examEndDate);
+                      
+                      if($current_time < $examStartTimestamp){
+                        ?>
+                      <span class="badge bg-warning">Not Start</span>
+                      <?php
+                      }elseif($current_time >= $examStartTimestamp && $current_time < $examEndTimestamp){
+                        ?>
+                      <span class="badge bg-danger">Live</span>
+                      <?php
+                      }elseif($current_time >= $examEndTimestamp){
+                        ?>
+                      <span class="badge bg-light">Finished</span>
+                      <?php
+                      }
+                      
+                    ?>
                     </td>
-                    <td><span class="badge bg-primary">Edit</span></td>
-                    <td><span class="badge bg-danger">Delete</span></td>
+                    <td><button value="<?=$row['id']?>" class="badge bg-primary border-0 editExamBtn"
+                        data-bs-toggle="modal" data-bs-target="#examEditModal">Edit</button></td>
+                    <td><button value="<?=$row['id']?>" class="badge bg-danger border-0 deleteExamBtn">Delete</button>
+                    </td>
                   </tr>
                   <?php
                     }
@@ -139,8 +178,30 @@ include 'includes/head.php';
       </section>
       <!-- Basic Tables end -->
     </div>
+    <!--scrolling content Modal -->
+    <div class="modal fade" id="examEditModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalScrollableTitle"
+      aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <form action="" method="post">
+            <div class="modal-body" id="examModalContent">
+
+
+            </div>
+          </form>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-light-secondary" data-bs-dismiss="modal">
+              <i class="bx bx-x d-block d-sm-none"></i>
+              <span class="d-none d-sm-block">Close</span>
+            </button>
+            <button type="button" id="saveExamBtn" class="btn btn-primary">Save changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <?php
-    } elseif (isset($_GET['Questions'])) {
+    }elseif (isset($_GET['Questions'])) {
       ?>
     <div class="page-heading">
       <!-- Basic Tables start -->
@@ -181,8 +242,10 @@ include 'includes/head.php';
                     <td><?=$row['question']?></td>
                     <td><?=$row['mark']?></td>
                     <td><?=$row['negative_mark']?></td>
-                    <td><span class="badge bg-primary">Edit</span></td>
-                    <td><span class="badge bg-danger">Delete</span></td>
+                    <td><a href="add.php?Update-Questions=<?=$row['id']?>"><span
+                          class="badge bg-primary">Edit</span></a></td>
+                    <td><button class="badge bg-danger border-0 deleteQuestionBtn"
+                        value="<?=$row['id']?>">Delete</button></td>
                   </tr>
                   <?php
                     }
@@ -251,7 +314,7 @@ include 'includes/head.php';
                       </button>
                     </td>
                     <td>
-                      <span class="badge bg-danger">Delete</span>
+                      <button value="<?=$row['id']?>" class="badge bg-danger border-0 deleteStudentBtn">Delete</button>
                     </td>
                   </tr>
                   <?php
@@ -516,7 +579,12 @@ include 'includes/head.php';
   if (isset($_SESSION['error'])) {
     ?>
   <script>
-  callError();
+  Swal2.fire({
+    icon: "error",
+    title: "Failed",
+  }).then(() => {
+    location.replace("<?=$_SESSION['replace_url']?>");
+  });
   </script>
   <?php
   unset($_SESSION['error']);
@@ -536,7 +604,36 @@ include 'includes/head.php';
   unset($_SESSION['warning']);
   unset($_SESSION['replace_url']);
   }
+  
+  // mcq question 
+  if (isset($_SESSION['mcq_message'])) {
+    ?>
+  <script>
+  Swal2.fire({
+    icon: "success",
+    title: "Added Successfully!",
+  }).then(() => {
+    location.replace("add.php?Questions");
+  });
+  </script>
+  <?php
+  unset($_SESSION['mcq_message']);
+  }
 
+  // written question
+  if (isset($_SESSION['written_message'])) {
+    ?>
+  <script>
+  Swal2.fire({
+    icon: "success",
+    title: "Added Successfully!",
+  }).then(() => {
+    location.replace("add.php?Written-Question");
+  });
+  </script>
+  <?php
+  unset($_SESSION['written_message']);
+  }
 
   ?>
   <script src="js/script.js"></script>
